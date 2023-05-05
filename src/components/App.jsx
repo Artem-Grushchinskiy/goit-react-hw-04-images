@@ -1,109 +1,108 @@
-import React, { Component } from 'react';
-import { fetchImages } from './services/api';
-import { Searchbar } from './Searchbar/Searchbar';
-import { Loader } from './Loader/Loader';
-import { ImageGallery } from './ImageGallery/ImageGallery';
-import { Button } from './Button/Button';
-import { animateScroll } from 'react-scroll';
-import { Modal } from './Modal/Modal';
+import { Component } from 'react';
+import { ToastContainer } from 'react-toastify';
+import Loader from 'components/Loader/Loader';
+import { toast } from 'react-toastify';
+
+import Searchbar from './Searchbar/Searchbar';
+import ImageGallery from './ImageGallery/ImageGallery';
+import searchQueryImg from 'services/api';
+import Button from 'components/Button/Button';
+import Modal from './Modal/Modal';
+import ImageDetails from './ImageDetails/ImageDetails';
+
+import 'react-toastify/dist/ReactToastify.css';
+import css from './App.css';
 
 export class App extends Component {
   state = {
     searchQuery: '',
-    images: [],
-    page: 1,
-    per_page: 12,
-    isLoading: false,
-    loadMore: false,
+    items: [],
+    loading: false,
     error: null,
+    page: 1,
+    totalHits: 0,
     showModal: false,
-    largeImageURL: 'largeImageURL',
-    id: null,
+    imgDetails: null,
   };
 
-  componentDidUpdate(_, prevState) {
-    console.log(prevState.page);
-    console.log(this.state.page);
+  componentDidUpdate(prevProps, prevState) {
     const { searchQuery, page } = this.state;
-    if (prevState.searchQuery !== searchQuery || prevState.page !== page) {
-      this.getImages(searchQuery, page);
+    const prevSearchQuery = prevState.searchQuery;
+    const prevPage = prevState.page;
+
+    if (prevSearchQuery !== searchQuery || prevPage !== page) {
+      this.fetchImg();
     }
   }
 
-  getImages = async (query, page) => {
-    this.setState({ isLoading: true });
-    if (!query) {
-      return;
-    }
+  async fetchImg() {
     try {
-      const { hits, totalHits } = await fetchImages(query, page);
-      console.log(hits, totalHits);
-      this.setState(prevState => ({
-        images: [...prevState.images, ...hits],
-        loadMore: this.state.page < Math.ceil(totalHits / this.state.per_page),
-      }));
+      this.setState({ loading: true });
+      const { searchQuery, page } = this.state;
+      const data = await searchQueryImg(searchQuery, page);
+
+      this.setState({ totalHits: data.totalHits });
+
+      if (data.hits.length === 0) {
+        toast.info(
+          'The search has not given any results. Try to find something else'
+        );
+      }
+      this.setState(({ items }) => ({ items: [...items, ...data.hits] }));
     } catch (error) {
       this.setState({ error: error.message });
     } finally {
-      this.setState({ isLoading: false });
+      this.setState({ loading: false });
     }
+  }
+
+  loadMore = () => {
+    this.setState(({ page }) => ({ page: page + 1 }));
   };
 
-  formSubmit = searchQuery => {
+  handleFormSubmit = searchQuery => {
+    this.setState({ searchQuery, items: [], page: 1 });
+  };
+
+  showImage = ({ largeImageURL }) => {
     this.setState({
-      searchQuery,
-      images: [],
-      page: 1,
-      loadMore: false,
-    });
-  };
-
-  onloadMore = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
-    this.scrollOnMoreButton();
-  };
-
-  scrollOnMoreButton = () => {
-    animateScroll.scrollToBottom({
-      duration: 1000,
-      delay: 10,
-      smooth: 'linear',
-    });
-  };
-
-  openModal = largeImageURL => {
-    console.log(largeImageURL);
-    this.setState({
+      imgDetails: {
+        largeImageURL,
+      },
       showModal: true,
-      largeImageURL: largeImageURL,
     });
   };
 
   closeModal = () => {
     this.setState({
+      imgDetails: null,
       showModal: false,
     });
   };
 
   render() {
-    const { images, isLoading, loadMore, page, showModal, largeImageURL } =
+    const { items, loading, error, showModal, imgDetails, totalHits } =
       this.state;
+
     return (
-      <>
-        <Searchbar onSubmit={this.formSubmit} />
+      <div className={css.App}>
+        <Searchbar onSubmit={this.handleFormSubmit} />
+        <ToastContainer autoClose={3000} />
+        <ImageGallery items={items} showImage={this.showImage} />
 
-        {isLoading ? (
-          <Loader />
-        ) : (
-          <ImageGallery images={images} openModal={this.openModal} />
+        {loading && <Loader />}
+        {error && <p>An error has occurred. Please try again later...</p>}
+
+        {totalHits > items.length && (
+          <Button text={'Load more'} onClick={this.loadMore} />
         )}
-
-        {loadMore && <Button onloadMore={this.onloadMore} page={page} />}
 
         {showModal && (
-          <Modal largeImageURL={largeImageURL} onClose={this.closeModal} />
+          <Modal close={this.closeModal}>
+            <ImageDetails {...imgDetails} />
+          </Modal>
         )}
-      </>
+      </div>
     );
   }
 }
