@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import css from './Button.css';
+import css from './Button.module.css';
 
 const Button = ({ text, onClick }) => {
   return (

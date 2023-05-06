@@ -2,7 +2,7 @@ import React from 'react';
 import ImageGalleryItem from './ImageGalleryItem/ImageGalleryItem';
 import PropTypes from 'prop-types';
 
-import css from './ImageGallery.css';
+import css from './ImageGallery.module.css';
 
 const ImageGallery = ({ items, showImage }) => {
   const elements = items.map(({ id, webformatURL, largeImageURL }) => (
