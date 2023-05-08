@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { ToastContainer } from 'react-toastify';
 import Loader from 'components/Loader/Loader';
 import { toast } from 'react-toastify';
@@ -11,98 +11,82 @@ import Modal from './Modal/Modal';
 import ImageDetails from './ImageDetails/ImageDetails';
 
 import 'react-toastify/dist/ReactToastify.css';
-import css from './App.css';
+import css from './App.module.css';
+export const App = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalHits, setTotalHits] = useState(0);
+  const [showModal, setShowModal] = useState(false);
+  const [imgDetails, setImgDetails] = useState(null);
 
-export class App extends Component {
-  state = {
-    searchQuery: '',
-    items: [],
-    loading: false,
-    error: null,
-    page: 1,
-    totalHits: 0,
-    showModal: false,
-    imgDetails: null,
-  };
-  componentDidUpdate(prevProps, prevState) {
-    const { searchQuery, page } = this.state;
-    const prevSearchQuery = prevState.searchQuery;
-    const prevPage = prevState.page;
-
-    if (prevSearchQuery !== searchQuery || prevPage !== page) {
-      this.fetchImg();
+  useEffect(() => {
+    if (!searchQuery) {
+      return;
     }
-  }
 
-  async fetchImg() {
-    try {
-      this.setState({ loading: true });
-      const { searchQuery, page } = this.state;
-      const data = await searchQueryImg(searchQuery, page);
+    const fetchImg = async () => {
+      try {
+        setLoading(true);
+        const data = await searchQueryImg(searchQuery, page);
 
-      this.setState({ totalHits: data.totalHits });
+        setTotalHits(data.totalHits);
 
-      if (data.hits.length === 0) {
-        console.log(data.hits.length);
-        toast.info(
-          'The search has not given any results. Try to find something else'
-        );
+        if (data.hits.length === 0) {
+          toast.info(
+            'The search has not given any results. Try to find something else'
+          );
+        }
+        setItems(prevItems => [...prevItems, ...data.hits]);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
       }
-      this.setState(({ items }) => ({ items: [...items, ...data.hits] }));
-    } catch (error) {
-      this.setState({ error: error.message });
-    } finally {
-      this.setState({ loading: false });
-    }
-  }
+    };
+    fetchImg();
+  }, [searchQuery, page]);
 
-  loadMore = () => {
-    this.setState(({ page }) => ({ page: page + 1 }));
+  const handleFormSubmit = searchQuery => {
+    setSearchQuery(searchQuery);
+    setItems([]);
+    setPage(1);
   };
 
-  handleFormSubmit = searchQuery => {
-    this.setState({ searchQuery, items: [], page: 1 });
+  const loadMore = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  showImage = ({ largeImageURL }) => {
-    this.setState({
-      imgDetails: {
-        largeImageURL,
-      },
-      showModal: true,
-    });
+  const showImage = largeImageURL => {
+    setImgDetails(largeImageURL);
+    setShowModal(true);
   };
 
-  closeModal = () => {
-    this.setState({
-      imgDetails: null,
-      showModal: false,
-    });
+  const closeModal = () => {
+    setImgDetails(null);
+    setShowModal(false);
   };
 
-  render() {
-    const { items, loading, error, showModal, imgDetails, totalHits } =
-      this.state;
+  return (
+    <div className={css.App}>
+      <Searchbar onSubmit={handleFormSubmit} />
+      <ToastContainer autoClose={3000} />
+      <ImageGallery items={items} showImage={showImage} />
 
-    return (
-      <div className={css.App}>
-        <Searchbar onSubmit={this.handleFormSubmit} />
-        <ToastContainer autoClose={3000} />
-        <ImageGallery items={items} showImage={this.showImage} />
+      {loading && <Loader />}
+      {error && <p>An error has occurred. Please try again later...</p>}
 
-        {loading && <Loader />}
-        {error && <p>An error has occurred. Please try again later...</p>}
+      {totalHits > items.length && items.length > 0 && (
+        <Button text={'Load more'} onClick={loadMore} />
+      )}
 
-        {totalHits > items.length && items.length > 0 && (
-          <Button text={'Load more'} onClick={this.loadMore} />
-        )}
-
-        {showModal && (
-          <Modal close={this.closeModal}>
-            <ImageDetails {...imgDetails} />
-          </Modal>
-        )}
-      </div>
-    );
-  }
-}
+      {showModal && (
+        <Modal close={closeModal}>
+          <ImageDetails {...imgDetails} />
+        </Modal>
+      )}
+    </div>
+  );
+};
