@@ -24,7 +24,6 @@ export class App extends Component {
     showModal: false,
     imgDetails: null,
   };
-
   componentDidUpdate(prevProps, prevState) {
     const { searchQuery, page } = this.state;
     const prevSearchQuery = prevState.searchQuery;
@@ -44,6 +43,7 @@ export class App extends Component {
       this.setState({ totalHits: data.totalHits });
 
       if (data.hits.length === 0) {
+        console.log(data.hits.length);
         toast.info(
           'The search has not given any results. Try to find something else'
         );
@@ -93,7 +93,7 @@ export class App extends Component {
         {loading && <Loader />}
         {error && <p>An error has occurred. Please try again later...</p>}
 
-        {totalHits > items.length && (
+        {totalHits > items.length && items.length > 0 && (
           <Button text={'Load more'} onClick={this.loadMore} />
         )}
 

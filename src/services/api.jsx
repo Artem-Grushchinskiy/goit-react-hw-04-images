@@ -1,5 +1,4 @@
 import axios from 'axios';
-import PropTypes from 'prop-types';
 
 const instance = axios.create({
   baseURL: 'https://pixabay.com/api',
@@ -19,10 +18,6 @@ export const searchQueryImg = async (searchQuery, page) => {
     },
   });
   return data;
-};
-
-searchQueryImg.propTypes = {
-  searchQuery: PropTypes.string.isRequired,
 };
 
 export default searchQueryImg;
